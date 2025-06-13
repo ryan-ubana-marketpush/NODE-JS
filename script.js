@@ -5,9 +5,7 @@ const fetch = require('node-fetch');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-
 const GOOGLE_CHAT_WEBHOOK = process.env.GOOGLE_CHAT_WEBHOOK;
-
 
 app.use(bodyParser.json());
 
@@ -18,9 +16,16 @@ app.post('/', async (req, res) => {
 
     const oldState = fields?.["System.State"]?.oldValue || "N/A";
     const newState = fields?.["System.State"]?.newValue || "N/A";
-    const title = resource.revision.fields["System.Title"] || "Unknown Task";
+    const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
-    const assignedTo = resource.revision.fields["System.AssignedTo"]?.displayName || "Unassigned";
+
+    // Reliable Assigned To fallback logic
+    let assignedTo = "Unassigned";
+    if (fields?.["System.AssignedTo"]?.newValue?.displayName) {
+      assignedTo = fields["System.AssignedTo"].newValue.displayName;
+    } else if (resource.revision?.fields?.["System.AssignedTo"]?.displayName) {
+      assignedTo = resource.revision.fields["System.AssignedTo"].displayName;
+    }
 
     const message = `
 🔔 *Azure DevOps Task Moved*
