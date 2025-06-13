@@ -18,12 +18,18 @@ app.post('/', async (req, res) => {
     const fields = resource.fields;
     const workItemId = resource.workItemId || resource.id;
 
-    const oldState = fields?.["System.State"]?.oldValue || "N/A";
-    const newState = fields?.["System.State"]?.newValue || "N/A";
+    const oldColumn = fields?.["System.BoardColumn"]?.oldValue || "N/A";
+    const newColumn = fields?.["System.BoardColumn"]?.newValue || "N/A";
+
+    // Exit early if not moved to "Ready to roll to PROD"
+    if (newColumn !== "Ready to roll to PROD") {
+      return res.status(200).send('No action needed');
+    }
+
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
-    // Fallback for AssignedTo field
+    // AssignedTo fallback
     let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
                   || resource.revision?.fields?.["System.AssignedTo"]?.displayName;
 
@@ -40,9 +46,9 @@ app.post('/', async (req, res) => {
     }
 
     const message = `
-🔔 *Azure DevOps Task Moved*
+🔔 *Azure DevOps Task Moved to "Ready to roll to PROD"*
 • *Title:* ${title}
-• *State:* ${oldState} → ${newState}
+• *Board Column:* ${oldColumn} → ${newColumn}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
     `;
