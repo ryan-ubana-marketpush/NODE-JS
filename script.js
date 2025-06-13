@@ -21,6 +21,13 @@ app.post('/', async (req, res) => {
 
     const oldState = fields?.["System.State"]?.oldValue || "N/A";
     const newState = fields?.["System.State"]?.newValue || "N/A";
+    const newColumn = fields?.["System.BoardColumn"]?.newValue || "N/A";
+
+    // ✅ Only notify if moved to "Ready to roll to PROD" column
+    if (newColumn !== "Ready to roll to PROD") {
+      return res.status(200).send('No notification needed');
+    }
+
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
@@ -41,8 +48,9 @@ app.post('/', async (req, res) => {
     }
 
     const message = `
-🔔 *Azure DevOps Task Moved*
+🔔 *Azure DevOps Task Moved to PROD*
 • *Title:* ${title}
+• *Column:* ${newColumn}
 • *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
