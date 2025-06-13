@@ -22,7 +22,7 @@ app.post('/', async (req, res) => {
     const newColumn = fields?.["System.BoardColumn"]?.newValue || "N/A";
 
     // Exit early if not moved to "Ready to roll to PROD"
-    if (newColumn !== "Ready to roll to PROD") {
+    if (newColumn !== "Ready to Roll to PROD") {
       return res.status(200).send('No action needed');
     }
 
