@@ -42,7 +42,7 @@ app.post('/', async (req, res) => {
     }
 
     // Check if bug was moved to "Ready to Roll to Prod"
-    if (newColumn === "Ready to Roll to Prod") {
+    if (newColumn === "Ready to Roll to PROD") {
       const message = `
 🚀 *Bug Ready for Production Deployment!*
 • *Title:* ${title}
