@@ -20,6 +20,8 @@ app.post('/', async (req, res) => {
 
     const oldState = fields?.["System.State"]?.oldValue || "N/A";
     const newState = fields?.["System.State"]?.newValue || "N/A";
+    const oldColumn = fields?.["System.BoardColumn"]?.oldValue || "N/A";
+    const newColumn = fields?.["System.BoardColumn"]?.newValue || "N/A";
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
@@ -39,21 +41,28 @@ app.post('/', async (req, res) => {
       assignedTo = data.fields?.["System.AssignedTo"]?.displayName || "Unassigned";
     }
 
-    const message = `
-🔔 *Azure DevOps Task Moved*
+    // Check if bug was moved to "Ready to Roll to Prod"
+    if (newColumn === "Ready to Roll to Prod") {
+      const message = `
+🚀 *Bug Ready for Production Deployment!*
 • *Title:* ${title}
-• *State:* ${oldState} → ${newState}
+• *Previous Column:* ${oldColumn}
+• *Current Column:* ${newColumn}
+• *Previous State:* ${oldState}
+• *Current State:* ${newState}
 • *Assigned to:* ${assignedTo}
-🔗 [View Task](${url})
-    `;
+🔗 [View Bug](${url})
+      `;
 
-    await fetch(GOOGLE_CHAT_WEBHOOK, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ text: message }),
-    });
+      await fetch(GOOGLE_CHAT_WEBHOOK, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: message }),
+      });
 
-    console.log('Notification sent.');
+      console.log('Deployment notification sent.');
+    }
+
     res.status(200).send('OK');
   } catch (error) {
     console.error('Error:', error);
