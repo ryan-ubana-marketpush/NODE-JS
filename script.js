@@ -29,23 +29,23 @@ app.post('/', async (req, res) => {
 
     // Fetch from Azure DevOps if missing
     if (!assignedTo && workItemId) {
-      const azureUrl = https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_apis/wit/workitems/${workItemId}?api-version=7.1-preview.3;
+      const azureUrl = `https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_apis/wit/workitems/${workItemId}?api-version=7.1-preview.3`;
       const response = await fetch(azureUrl, {
         headers: {
-          'Authorization': 'Basic ' + Buffer.from(:${AZURE_PAT}).toString('base64'),
+          'Authorization': 'Basic ' + Buffer.from(`:${AZURE_PAT}`).toString('base64'),
         },
       });
       const data = await response.json();
       assignedTo = data.fields?.["System.AssignedTo"]?.displayName || "Unassigned";
     }
 
-    const message = 
+    const message = `
 🔔 *Azure DevOps Task Moved*
 • *Title:* ${title}
 • *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
-    ;
+    `;
 
     await fetch(GOOGLE_CHAT_WEBHOOK, {
       method: 'POST',
@@ -62,5 +62,5 @@ app.post('/', async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(Server running on port ${PORT});
+  console.log(`Server running on port ${PORT}`);
 });
