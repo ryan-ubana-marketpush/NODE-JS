@@ -24,7 +24,7 @@ app.post('/', async (req, res) => {
     const newColumn = fields?.["System.BoardColumn"]?.newValue || "N/A";
 
     // ✅ Only notify if moved to "Ready to roll to PROD" column
-    if (newColumn !== "Ready to roll to PROD") {
+    if (newColumn !== "Ready to Roll to PROD") {
       return res.status(200).send('No notification needed');
     }
 
