@@ -10,7 +10,9 @@ const AZURE_ORG = process.env.AZURE_ORG;
 const AZURE_PROJECT = process.env.AZURE_PROJECT;
 const AZURE_PAT = process.env.AZURE_PAT;
 
-app.use(bodyParser.json());
+// ✅ Increase payload size limit
+app.use(bodyParser.json({ limit: '50mb' }));
+app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
 app.post('/', async (req, res) => {
   try {
@@ -23,11 +25,9 @@ app.post('/', async (req, res) => {
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
-    // Fallback for AssignedTo field
     let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
                   || resource.revision?.fields?.["System.AssignedTo"]?.displayName;
 
-    // Fetch from Azure DevOps if missing
     if (!assignedTo && workItemId) {
       const azureUrl = `https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_apis/wit/workitems/${workItemId}?api-version=7.1-preview.3`;
       const response = await fetch(azureUrl, {
