@@ -15,47 +15,47 @@ app.use(bodyParser.json());
 app.post('/', async (req, res) => {
   try {
     const resource = req.body.resource;
-    const fields = resource.fields;
+    const fields = resource.fields || {};
     const workItemId = resource.workItemId || resource.id;
 
-    const oldState = fields?.["System.State"]?.oldValue || "N/A";
-    const newState = fields?.["System.State"]?.newValue || "N/A";
+    const oldColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.oldValue;
+    const newColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.newValue;
 
-    // 🔒 Exit if the new state isn't "Ready to Roll to PROD"
-    if (newState !== "Ready to Roll to PROD") {
-      console.log(`⏭ Skipped: State not changed to 'Ready to Roll to PROD' (Current: ${newState})`);
+    // Only react if BoardColumn changed to "Ready to Roll to PROD"
+    if (newColumn !== "Ready to Roll to PROD") {
+      console.log(`⏭ Skipped: Column is not 'Ready to Roll to PROD' (${newColumn})`);
       return res.status(200).send('No action needed');
     }
+
+    console.log(`📥 Work Item ${workItemId} moved to column: ${newColumn}`);
 
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
-    // Try getting the assignee from payload
+    // Fallback for AssignedTo field
     let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
                   || resource.revision?.fields?.["System.AssignedTo"]?.displayName;
 
-    // Fallback: fetch work item directly
+    // Fetch from Azure DevOps if missing
     if (!assignedTo && workItemId) {
       const azureUrl = `https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_apis/wit/workitems/${workItemId}?api-version=7.1-preview.3`;
       const response = await fetch(azureUrl, {
         headers: {
-          'Authorization': 'Basic ' + Buffer.from(`:${AZURE_PAT}`).toString('base64'),
+          Authorization: 'Basic ' + Buffer.from(`:${AZURE_PAT}`).toString('base64'),
         },
       });
       const data = await response.json();
       assignedTo = data.fields?.["System.AssignedTo"]?.displayName || "Unassigned";
     }
 
-    // ✉️ Notification message
     const message = `
-🔔 *Azure DevOps Task Moved to Ready to Roll to PROD*
+🔔 *Azure DevOps Task Moved to Board Column*
 • *Title:* ${title}
-• *State:* ${oldState} → ${newState}
+• *Column:* ${oldColumn || "Unknown"} → ${newColumn}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
     `;
 
-    // 📤 Send to Google Chat
     await fetch(GOOGLE_CHAT_WEBHOOK, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -65,7 +65,7 @@ app.post('/', async (req, res) => {
     console.log('✅ Notification sent.');
     res.status(200).send('OK');
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error sending notification:', error);
     res.status(500).send('Failed to send notification');
   }
 });
