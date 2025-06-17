@@ -19,6 +19,9 @@ app.post('/', async (req, res) => {
     const fields = resource.fields;
     const workItemId = resource.workItemId || resource.id;
 
+    // 🔍 Debug: Log full field payload
+    console.log("FIELDS RECEIVED:", JSON.stringify(fields, null, 2));
+
     const workItemType = fields?.["System.WorkItemType"]?.newValue 
                       || resource.revision?.fields?.["System.WorkItemType"];
     const boardColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.newValue;
