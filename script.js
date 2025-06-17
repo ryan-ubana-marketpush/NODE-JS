@@ -16,44 +16,43 @@ app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 app.post('/', async (req, res) => {
   try {
     const resource = req.body.resource;
-    const fields = resource.fields || {};
+    const fields = resource.fields;
     const workItemId = resource.workItemId || resource.id;
 
-    console.log('📥 Incoming Work Item Update:', workItemId);
+    const workItemType = fields?.["System.WorkItemType"]?.newValue 
+                      || resource.revision?.fields?.["System.WorkItemType"];
+    const boardColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.newValue;
+    const oldBoardColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.oldValue;
 
-    // Check if BoardColumn changed
-    const oldColumn = fields['Microsoft.VSTS.Common.BoardColumn']?.oldValue;
-    const newColumn = fields['Microsoft.VSTS.Common.BoardColumn']?.newValue;
+    const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
+    const url = resource._links?.html?.href || "No URL";
 
-    if (!newColumn || newColumn !== 'Ready to Roll to PROD') {
-      console.log(`⏭ Skipped: Column is not 'Ready to Roll to PROD' (${newColumn})`);
+    // Only proceed if it's a Bug moving to 'Ready to Roll to PROD'
+    if (workItemType !== "Bug" || boardColumn !== "Ready to Roll to PROD") {
+      console.log(`Skipped: Not a Bug or not moved to 'Ready to Roll to PROD' column`);
       return res.status(200).send('No action needed');
     }
 
-    // Get title and assignedTo (fallback to fetch if needed)
-    let title = fields['System.Title'] || resource.revision?.fields?.['System.Title'] || 'Unknown Task';
-    let assignedTo = fields['System.AssignedTo']?.newValue?.displayName ||
-                     resource.revision?.fields?.['System.AssignedTo']?.displayName;
+    // Get assignedTo (either from payload or fetch fallback)
+    let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
+                  || resource.revision?.fields?.["System.AssignedTo"]?.displayName;
 
-    if (!assignedTo) {
+    if (!assignedTo && workItemId) {
       const azureUrl = `https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_apis/wit/workitems/${workItemId}?api-version=7.1-preview.3`;
       const response = await fetch(azureUrl, {
         headers: {
-          Authorization: 'Basic ' + Buffer.from(`:${AZURE_PAT}`).toString('base64'),
+          'Authorization': 'Basic ' + Buffer.from(`:${AZURE_PAT}`).toString('base64'),
         },
       });
       const data = await response.json();
-      assignedTo = data.fields?.['System.AssignedTo']?.displayName || 'Unassigned';
-      title = title === 'Unknown Task' ? data.fields?.['System.Title'] : title;
+      assignedTo = data.fields?.["System.AssignedTo"]?.displayName || "Unassigned";
     }
 
-    const url = resource._links?.html?.href || `https://dev.azure.com/${AZURE_ORG}/${AZURE_PROJECT}/_workitems/edit/${workItemId}`;
-
-    // Send to Google Chat
+    // Send notification to Google Workspace Chat
     const message = `
-🔔 *Azure DevOps Task Moved on Board*
+🔔 *Azure DevOps Bug Moved to Column*
 • *Title:* ${title}
-• *Board Column:* ${oldColumn || 'Unknown'} → ${newColumn}
+• *Board Column:* ${oldBoardColumn} → ${boardColumn}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
     `;
@@ -67,7 +66,7 @@ app.post('/', async (req, res) => {
     console.log('✅ Notification sent.');
     res.status(200).send('OK');
   } catch (error) {
-    console.error('❌ Error:', error);
+    console.error('❌ Error sending notification:', error);
     res.status(500).send('Failed to send notification');
   }
 });
