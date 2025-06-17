@@ -20,6 +20,7 @@ app.post('/', async (req, res) => {
     const workItemId = resource.workItemId || resource.id;
 
     console.log('📥 Incoming Work Item Update:', workItemId);
+    console.log('🔍 Available fields in payload:', Object.keys(fields)); // <-- Added this line
 
     const workItemType =
       fields['System.WorkItemType']?.newValue ||
