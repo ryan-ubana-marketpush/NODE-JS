@@ -27,7 +27,8 @@ app.post('/', async (req, res) => {
       return res.status(200).send('No notification needed.');
     }
 
-    const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
+    const title = resource.revision?.fields?.["System.Title"] || "Unknown Title";
+    const workItemType = resource.revision?.fields?.["System.WorkItemType"] || "Work Item";
     const url = resource._links?.html?.href || "No URL";
 
     let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
@@ -45,11 +46,11 @@ app.post('/', async (req, res) => {
     }
 
     const message = `
-🔔 *Azure DevOps Task Moved to PROD Ready*
+🔔 *${workItemType} Ready for PROD*
 • *Title:* ${title}
 • *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
-🔗 [View Task](${url})
+🔗 [View ${workItemType}](${url})
     `;
 
     await fetch(GOOGLE_CHAT_WEBHOOK, {
