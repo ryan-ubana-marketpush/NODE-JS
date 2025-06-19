@@ -22,12 +22,13 @@ app.post('/', async (req, res) => {
     const oldState = fields?.["System.State"]?.oldValue || "N/A";
     const newState = fields?.["System.State"]?.newValue || "N/A";
 
-    // ✅ Only notify when the item is moved to "Ready to Roll to PROD"
-    if (newState !== "Ready to Roll to PROD") {
+    // ✅ Only notify when moved to UAT or PROD
+    const validStates = ["Ready to Roll to PROD", "Ready to Roll to UAT"];
+    if (!validStates.includes(newState)) {
       return res.status(200).send('No notification needed.');
     }
 
-    const title = resource.revision?.fields?.["System.Title"] || "Unknown Title";
+    const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const workItemType = resource.revision?.fields?.["System.WorkItemType"] || "Work Item";
     const url = resource._links?.html?.href || "No URL";
 
@@ -46,7 +47,7 @@ app.post('/', async (req, res) => {
     }
 
     const message = `
-🔔 *${workItemType} Ready for PROD*
+🔔 *${workItemType} Moved to ${newState}*
 • *Title:* ${title}
 • *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
