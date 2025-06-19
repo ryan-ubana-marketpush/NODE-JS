@@ -10,7 +10,6 @@ const AZURE_ORG = process.env.AZURE_ORG;
 const AZURE_PROJECT = process.env.AZURE_PROJECT;
 const AZURE_PAT = process.env.AZURE_PAT;
 
-// ✅ Increase payload size limit
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -22,6 +21,12 @@ app.post('/', async (req, res) => {
 
     const oldState = fields?.["System.State"]?.oldValue || "N/A";
     const newState = fields?.["System.State"]?.newValue || "N/A";
+
+    // ✅ Only notify when the item is moved to "Ready to Roll to PROD"
+    if (newState !== "Ready to Roll to PROD") {
+      return res.status(200).send('No notification needed.');
+    }
+
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
@@ -40,7 +45,7 @@ app.post('/', async (req, res) => {
     }
 
     const message = `
-🔔 *Azure DevOps Task Moved*
+🔔 *Azure DevOps Task Moved to PROD Ready*
 • *Title:* ${title}
 • *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
@@ -54,7 +59,7 @@ app.post('/', async (req, res) => {
     });
 
     console.log('Notification sent.');
-    res.status(200).send('OK');
+    res.status(200).send('Notification sent.');
   } catch (error) {
     console.error('Error:', error);
     res.status(500).send('Failed to send notification');
