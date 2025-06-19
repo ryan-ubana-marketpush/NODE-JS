@@ -10,6 +10,7 @@ const AZURE_ORG = process.env.AZURE_ORG;
 const AZURE_PROJECT = process.env.AZURE_PROJECT;
 const AZURE_PAT = process.env.AZURE_PAT;
 
+// ✅ Increase payload size limit
 app.use(bodyParser.json({ limit: '50mb' }));
 app.use(bodyParser.urlencoded({ extended: true, limit: '50mb' }));
 
@@ -19,24 +20,11 @@ app.post('/', async (req, res) => {
     const fields = resource.fields;
     const workItemId = resource.workItemId || resource.id;
 
-    // 🔍 Debug: Log full field payload
-    console.log("FIELDS RECEIVED:", JSON.stringify(fields, null, 2));
-
-    const workItemType = fields?.["System.WorkItemType"]?.newValue 
-                      || resource.revision?.fields?.["System.WorkItemType"];
-    const boardColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.newValue;
-    const oldBoardColumn = fields?.["Microsoft.VSTS.Common.BoardColumn"]?.oldValue;
-
+    const oldState = fields?.["System.State"]?.oldValue || "N/A";
+    const newState = fields?.["System.State"]?.newValue || "N/A";
     const title = resource.revision?.fields?.["System.Title"] || "Unknown Task";
     const url = resource._links?.html?.href || "No URL";
 
-    // Only proceed if it's a Bug moving to 'Ready to Roll to PROD'
-    if (workItemType !== "Bug" || boardColumn !== "Ready to Roll to PROD") {
-      console.log(`Skipped: Not a Bug or not moved to 'Ready to Roll to PROD' column`);
-      return res.status(200).send('No action needed');
-    }
-
-    // Get assignedTo (either from payload or fetch fallback)
     let assignedTo = fields?.["System.AssignedTo"]?.newValue?.displayName
                   || resource.revision?.fields?.["System.AssignedTo"]?.displayName;
 
@@ -51,11 +39,10 @@ app.post('/', async (req, res) => {
       assignedTo = data.fields?.["System.AssignedTo"]?.displayName || "Unassigned";
     }
 
-    // Send notification to Google Workspace Chat
     const message = `
-🔔 *Azure DevOps Bug Moved to Column*
+🔔 *Azure DevOps Task Moved*
 • *Title:* ${title}
-• *Board Column:* ${oldBoardColumn} → ${boardColumn}
+• *State:* ${oldState} → ${newState}
 • *Assigned to:* ${assignedTo}
 🔗 [View Task](${url})
     `;
@@ -66,14 +53,14 @@ app.post('/', async (req, res) => {
       body: JSON.stringify({ text: message }),
     });
 
-    console.log('✅ Notification sent.');
+    console.log('Notification sent.');
     res.status(200).send('OK');
   } catch (error) {
-    console.error('❌ Error sending notification:', error);
+    console.error('Error:', error);
     res.status(500).send('Failed to send notification');
   }
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`Server running on port ${PORT}`);
 });
